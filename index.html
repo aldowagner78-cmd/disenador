@@ -37,7 +37,11 @@
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-            filter: drop-shadow(0 14px 22px rgba(0,0,0,.28));
+            /* Sombra realista: difusa hacia abajo (objeto sobre suelo) */
+            filter:
+                drop-shadow(0px 18px 12px rgba(0,0,0,.35))
+                drop-shadow(0px  8px  4px rgba(0,0,0,.20))
+                drop-shadow(0px  2px  2px rgba(0,0,0,.15));
         }
         #sofa:active { cursor: grabbing; }
 
@@ -149,15 +153,29 @@
 <svg style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true">
   <defs>
     <filter id="cSVG" color-interpolation-filters="sRGB"
-            x="0%" y="0%" width="100%" height="100%">
-      <!-- Paso 1: convertir la imagen original a escala de grises -->
+            x="-2%" y="-2%" width="104%" height="104%">
+
+      <!-- 1. Desaturar completamente: queda solo luminosidad (luces/sombras/textura) -->
       <feColorMatrix type="saturate" values="0" in="SourceGraphic" result="gray"/>
-      <!-- Paso 2: color exacto elegido como flood -->
+
+      <!-- 2. Color exacto elegido -->
       <feFlood id="cfFlood" flood-color="#C8B97A" flood-opacity="1" result="col"/>
-      <!-- Paso 3: tono+sat del flood + luminosidad del gris = color exacto sobre geometria -->
+
+      <!-- 3. Aplicar el color sobre la luminosidad del gris (Photoshop "Color" blend) -->
       <feBlend in="col" in2="gray" mode="color" result="colorized"/>
-      <!-- Paso 4: recortar al alpha original del PNG (preserva transparencia) -->
-      <feComposite in="colorized" in2="SourceGraphic" operator="in"/>
+
+      <!-- 4. Boost de contraste/profundidad: gamma < 1 aclara medios, > 1 oscurece -->
+      <feComponentTransfer in="colorized" result="vivid">
+        <feFuncR type="gamma" amplitude="1.08" exponent="0.88" offset="-0.01"/>
+        <feFuncG type="gamma" amplitude="1.08" exponent="0.88" offset="-0.01"/>
+        <feFuncB type="gamma" amplitude="1.08" exponent="0.88" offset="-0.01"/>
+      </feComponentTransfer>
+
+      <!-- 5. Erosionar el alpha 1px: elimina el halo blanco de los bordes del PNG -->
+      <feMorphology in="SourceAlpha" operator="erode" radius="1" result="alpha_clean"/>
+
+      <!-- 6. Recortar imagen colorizada al alpha limpio (sin halo) -->
+      <feComposite in="vivid" in2="alpha_clean" operator="in"/>
     </filter>
   </defs>
 </svg>
@@ -253,10 +271,10 @@
     ---------------------------------------------------------- */
     function applySofaInitial() {
         sofaEl.style.position        = 'absolute';
-        sofaEl.style.width           = '62%';
+        sofaEl.style.width           = '70%';
         sofaEl.style.height          = 'auto';
-        sofaEl.style.left            = '19%';
-        sofaEl.style.bottom          = '5%';
+        sofaEl.style.left            = '15%';
+        sofaEl.style.bottom          = '4%';
         sofaEl.style.top             = 'auto';
         sofaEl.style.right           = 'auto';
         sofaEl.style.transform       = '';
