@@ -150,9 +150,14 @@
   <defs>
     <filter id="cSVG" color-interpolation-filters="sRGB"
             x="0%" y="0%" width="100%" height="100%">
+      <!-- Paso 1: convertir la imagen original a escala de grises -->
+      <feColorMatrix type="saturate" values="0" in="SourceGraphic" result="gray"/>
+      <!-- Paso 2: color exacto elegido como flood -->
       <feFlood id="cfFlood" flood-color="#C8B97A" flood-opacity="1" result="col"/>
-      <feBlend in="col" in2="SourceGraphic" mode="color" result="blended"/>
-      <feComposite in="blended" in2="SourceGraphic" operator="in"/>
+      <!-- Paso 3: tono+sat del flood + luminosidad del gris = color exacto sobre geometria -->
+      <feBlend in="col" in2="gray" mode="color" result="colorized"/>
+      <!-- Paso 4: recortar al alpha original del PNG (preserva transparencia) -->
+      <feComposite in="colorized" in2="SourceGraphic" operator="in"/>
     </filter>
   </defs>
 </svg>
