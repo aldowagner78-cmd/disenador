@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <title>Configurador de Sillon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #eceae6; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100dvh; }
+
+        #visor {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+            aspect-ratio: 3/4;
+            margin: 0 auto;
+            overflow: hidden;
+            border-radius: 1.5rem;
+            box-shadow: 0 28px 56px rgba(0,0,0,.22), 0 4px 12px rgba(0,0,0,.1);
+            background: #c5d0d8;
+        }
+
+        .env-img {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            user-select: none; pointer-events: none;
+        }
+
+        /* --- SOFA --- */
+        #sofa {
+            position: absolute;
+            z-index: 3;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            filter: drop-shadow(0 14px 22px rgba(0,0,0,.28));
+        }
+        #sofa:active { cursor: grabbing; }
+
+        #sofaImg {
+            display: block;
+            width: 100%;
+            height: auto;
+            pointer-events: none;
+        }
+
+        /* Handles: visibles solo con hover */
+        #sofa:hover #sofaHandles { opacity: 1; }
+        #sofaHandles {
+            opacity: 0;
+            transition: opacity .18s;
+            position: absolute; inset: 0;
+            pointer-events: none;
+        }
+        .hdl-border {
+            position: absolute; inset: 0;
+            border: 2px dashed rgba(99,102,241,.60);
+            border-radius: 4px;
+        }
+        .hdl-rotate {
+            position: absolute;
+            top: -32px; left: 50%; transform: translateX(-50%);
+            width: 24px; height: 24px;
+            background: #6366f1; border: 2.5px solid #fff;
+            border-radius: 50%;
+            cursor: crosshair; pointer-events: all;
+            box-shadow: 0 2px 8px rgba(99,102,241,.5);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: white; line-height: 1;
+        }
+        .hdl-rotate::after {
+            content: '';
+            position: absolute; top: 100%; left: 50%;
+            transform: translateX(-50%);
+            width: 2px; height: 28px;
+            background: rgba(99,102,241,.35);
+        }
+        .hdl-scale {
+            position: absolute; bottom: -9px; right: -9px;
+            width: 22px; height: 22px;
+            background: white; border: 2.5px solid #6366f1;
+            border-radius: 5px;
+            cursor: se-resize; pointer-events: all;
+            box-shadow: 0 2px 8px rgba(0,0,0,.22);
+        }
+
+        /* Paleta */
+        .panel {
+            background: #fff;
+            border: 1px solid rgba(0,0,0,.07);
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 24px rgba(0,0,0,.07);
+        }
+        .sw {
+            width: 3.1rem; height: 3.7rem;
+            border-radius: .7rem;
+            border: 3px solid transparent;
+            cursor: pointer; flex-shrink: 0;
+            outline: none; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            transition: transform .15s, border-color .15s, box-shadow .15s;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-end;
+            padding-bottom: 3px;
+        }
+        .sw:hover { transform: scale(1.1); box-shadow: 0 5px 16px rgba(0,0,0,.22); }
+        .sw.active {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,.3), 0 5px 14px rgba(0,0,0,.2);
+            transform: scale(1.12);
+        }
+        .sw-lbl {
+            font-size: .46rem; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .04em;
+            color: rgba(255,255,255,.95);
+            text-shadow: 0 1px 4px rgba(0,0,0,.6);
+            text-align: center; line-height: 1.2;
+        }
+        #activeBadge {
+            width: 3rem; height: 3rem; border-radius: .65rem;
+            border: 2px solid rgba(0,0,0,.1);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,.1);
+            flex-shrink: 0; transition: background .28s;
+        }
+        #toast {
+            position: fixed; bottom: 1.5rem; left: 50%;
+            transform: translateX(-50%) translateY(2rem);
+            background: #1e293b; color: #fff;
+            padding: .5rem 1.4rem; border-radius: 2rem;
+            font-size: .82rem; font-weight: 500;
+            opacity: 0; pointer-events: none;
+            transition: opacity .3s, transform .3s; z-index: 9999;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body class="py-6 px-4">
+
+<!--
+  FILTRO SVG INLINE: feBlend mode="color"
+  - Toma el color exacto elegido (flood) como fuente de hue+saturacion
+  - Conserva la luminosidad del tejido original (luces, sombras, textura)
+  - feComposite operator="in" preserva la transparencia del PNG del sillon
+-->
+<svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true">
+  <defs>
+    <filter id="cSVG" color-interpolation-filters="sRGB"
+            x="0%" y="0%" width="100%" height="100%">
+      <feFlood id="cfFlood" flood-color="#C8B97A" flood-opacity="1" result="col"/>
+      <feBlend in="col" in2="SourceGraphic" mode="color" result="blended"/>
+      <feComposite in="blended" in2="SourceGraphic" operator="in"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="max-w-xl mx-auto flex flex-col gap-4">
+
+    <div class="text-center">
+        <h1 class="text-2xl font-black text-gray-800 tracking-tight">Configurador de Sillon</h1>
+        <p class="text-xs text-gray-400 mt-1">Elige un color &bull; arrastra para mover &bull; usa las asas para rotar y escalar</p>
+    </div>
+
+    <!-- VISOR -->
+    <div id="visor">
+        <img src="ambiente.png" class="env-img" alt="Ambiente"
+             onerror="this.src='https://placehold.co/520x693/c5d0d8/7a8fa0?text=ambiente.png'">
+
+        <div id="sofa">
+            <div id="sofaHandles">
+                <div class="hdl-border"></div>
+                <div class="hdl-rotate" id="hRot" title="Rotar">&#8635;</div>
+                <div class="hdl-scale"  id="hScl" title="Escalar"></div>
+            </div>
+            <img id="sofaImg" src="sillon.png" alt="Sillon"
+                 onerror="this.src='https://placehold.co/340x240/c8b89a/7a6a50?text=sillon.png'">
+        </div>
+    </div>
+
+    <!-- PALETA -->
+    <div class="panel px-5 py-4">
+        <div class="flex items-center gap-3 mb-4">
+            <div id="activeBadge" style="background:#C8B97A"></div>
+            <div class="flex-1 min-w-0">
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Tela seleccionada</p>
+                <p class="font-bold text-gray-800 text-sm mt-0.5 truncate" id="cName">Arena</p>
+                <p class="font-mono text-xs text-gray-400" id="cHex">#C8B97A</p>
+            </div>
+            <p class="text-xs text-gray-300 uppercase tracking-widest font-semibold text-right leading-snug">Paleta<br>de telas</p>
+        </div>
+        <div id="palette" class="flex flex-wrap gap-2"></div>
+    </div>
+
+    <!-- COMPARTIR -->
+    <div class="flex justify-center pb-2">
+        <button id="btnShare"
+            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Copiar enlace de este diseno
+        </button>
+    </div>
+</div>
+
+<div id="toast">&#10003;&nbsp; Enlace copiado</div>
+
+<script>
+(function () {
+    var PALETTE = [
+        { id:'arena',      hex:'#C8B97A', name:'Arena'       },
+        { id:'crudo',      hex:'#D4C5B0', name:'Crudo'       },
+        { id:'gris-perla', hex:'#C2BFBA', name:'Gris Perla'  },
+        { id:'gris-medio', hex:'#8A8680', name:'Gris Medio'  },
+        { id:'rosa-palo',  hex:'#CC9E9A', name:'Rosa Palo'   },
+        { id:'menta',      hex:'#90BDB7', name:'Menta'       },
+        { id:'salvia',     hex:'#6E9E76', name:'Vd. Salvia'  },
+        { id:'esmeralda',  hex:'#246858', name:'Esmeralda'   },
+        { id:'terracota',  hex:'#BF5836', name:'Terracota'   },
+        { id:'mostaza',    hex:'#C49030', name:'Mostaza'     },
+        { id:'celeste',    hex:'#82AEBF', name:'Celeste'     },
+        { id:'marino',     hex:'#283E5E', name:'Az. Marino'  }
+    ];
+
+    var sofaEl   = document.getElementById('sofa');
+    var sofaImg  = document.getElementById('sofaImg');
+    var hRot     = document.getElementById('hRot');
+    var hScl     = document.getElementById('hScl');
+    var visor    = document.getElementById('visor');
+    var paletteEl= document.getElementById('palette');
+    var badge    = document.getElementById('activeBadge');
+    var cNameEl  = document.getElementById('cName');
+    var cHexEl   = document.getElementById('cHex');
+    var btnShare = document.getElementById('btnShare');
+    var toastEl  = document.getElementById('toast');
+    var cfFlood  = document.getElementById('cfFlood');
+    var rot      = 0;
+    var pxReady  = false;
+
+    /* ----------------------------------------------------------
+       POSICION INICIAL: proporcional a la foto de referencia.
+       Sillon ~62% del ancho, centrado, base a ~5% desde abajo.
+    ---------------------------------------------------------- */
+    function applySofaInitial() {
+        sofaEl.style.position        = 'absolute';
+        sofaEl.style.width           = '62%';
+        sofaEl.style.height          = 'auto';
+        sofaEl.style.left            = '19%';
+        sofaEl.style.bottom          = '5%';
+        sofaEl.style.top             = 'auto';
+        sofaEl.style.right           = 'auto';
+        sofaEl.style.transform       = '';
+        sofaEl.style.transformOrigin = '50% 100%';
+        rot     = 0;
+        pxReady = false;
+    }
+
+    /*
+      Convierte posicion % a px una sola vez (sin salto visual).
+      Se llama proactivamente despues de cargar la imagen,
+      para que el primer pointerdown NO cause ningun salto/zoom.
+    */
+    function toAbsPx() {
+        if (pxReady) return;
+        var vr = visor.getBoundingClientRect();
+        var sr = sofaEl.getBoundingClientRect();
+        /* Deshabilitar transiciones para evitar glitch */
+        sofaEl.style.transition = 'none';
+        sofaEl.style.bottom = 'auto';
+        sofaEl.style.right  = 'auto';
+        sofaEl.style.top    = Math.round(sr.top  - vr.top)  + 'px';
+        sofaEl.style.left   = Math.round(sr.left - vr.left) + 'px';
+        sofaEl.style.width  = Math.round(sr.width) + 'px';
+        void sofaEl.offsetWidth; /* forzar reflow */
+        sofaEl.style.transition = '';
+        pxReady = true;
+    }
+
+    function pt(e) {
+        var s = (e.touches && e.touches.length) ? e.touches[0] : e;
+        return { x: s.clientX, y: s.clientY };
+    }
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+    /* ---- MOVER ---- */
+    var mv = null;
+    sofaEl.addEventListener('pointerdown', function (e) {
+        if (e.target === hRot || e.target === hScl) return;
+        e.preventDefault();
+        sofaEl.setPointerCapture(e.pointerId);
+        /* Ya esta en px gracias al init — no hay salto */
+        var p = pt(e);
+        mv = {
+            sx: p.x, sy: p.y,
+            ox: parseFloat(sofaEl.style.left) || 0,
+            oy: parseFloat(sofaEl.style.top)  || 0
+        };
+    });
+    sofaEl.addEventListener('pointermove', function (e) {
+        if (!mv) return;
+        e.preventDefault();
+        var p  = pt(e);
+        var vr = visor.getBoundingClientRect();
+        var w  = parseFloat(sofaEl.style.width) || sofaEl.offsetWidth;
+        var h  = sofaEl.offsetHeight;
+        sofaEl.style.left = clamp(mv.ox + p.x - mv.sx, -w * .25, vr.width  - w * .75) + 'px';
+        sofaEl.style.top  = clamp(mv.oy + p.y - mv.sy, -h * .05, vr.height - h * .15) + 'px';
+    });
+    sofaEl.addEventListener('pointerup',     function () { mv = null; });
+    sofaEl.addEventListener('pointercancel', function () { mv = null; });
+
+    /* ---- ROTAR ---- */
+    var rv = null;
+    hRot.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        hRot.setPointerCapture(e.pointerId);
+        var vr = visor.getBoundingClientRect();
+        var cx = vr.left + parseFloat(sofaEl.style.left) + sofaEl.offsetWidth  / 2;
+        var cy = vr.top  + parseFloat(sofaEl.style.top)  + sofaEl.offsetHeight / 2;
+        var p  = pt(e);
+        rv = {
+            cx: cx, cy: cy,
+            ir: rot,
+            sa: Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI
+        };
+    });
+    hRot.addEventListener('pointermove', function (e) {
+        if (!rv) return;
+        var p = pt(e);
+        rot = rv.ir + (Math.atan2(p.y - rv.cy, p.x - rv.cx) * 180 / Math.PI - rv.sa);
+        sofaEl.style.transform = 'rotate(' + rot + 'deg)';
+    });
+    hRot.addEventListener('pointerup',     function () { rv = null; });
+    hRot.addEventListener('pointercancel', function () { rv = null; });
+
+    /* ---- ESCALAR ---- */
+    var sv = null;
+    hScl.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        hScl.setPointerCapture(e.pointerId);
+        sv = {
+            sx: pt(e).x,
+            ow: parseFloat(sofaEl.style.width) || sofaEl.offsetWidth
+        };
+    });
+    hScl.addEventListener('pointermove', function (e) {
+        if (!sv) return;
+        var vr = visor.getBoundingClientRect();
+        var nw = clamp(sv.ow + (pt(e).x - sv.sx), 80, vr.width * .97);
+        sofaEl.style.width  = nw + 'px';
+        sofaEl.style.height = 'auto';
+    });
+    hScl.addEventListener('pointerup',     function () { sv = null; });
+    hScl.addEventListener('pointercancel', function () { sv = null; });
+
+    /* ---- COLOR ---- */
+    var activeBtn = null;
+    function applyColor(c) {
+        cfFlood.setAttribute('flood-color', c.hex);
+        sofaImg.style.filter   = 'url(#cSVG)';
+        badge.style.background = c.hex;
+        cNameEl.textContent    = c.name;
+        cHexEl.textContent     = c.hex;
+        if (activeBtn) activeBtn.classList.remove('active');
+        activeBtn = document.getElementById('sw-' + c.id);
+        if (activeBtn) activeBtn.classList.add('active');
+        var url = new URL(location.href);
+        url.searchParams.set('color', c.id);
+        history.replaceState({}, '', url);
+    }
+
+    PALETTE.forEach(function (c) {
+        var btn = document.createElement('button');
+        btn.className = 'sw';
+        btn.id        = 'sw-' + c.id;
+        btn.style.background = c.hex;
+        btn.title     = c.name;
+        btn.setAttribute('aria-label', c.name);
+        btn.innerHTML = '<span class="sw-lbl">' + c.name + '</span>';
+        btn.addEventListener('click', function () { applyColor(c); });
+        paletteEl.appendChild(btn);
+    });
+
+    /* ---- COMPARTIR ---- */
+    btnShare.addEventListener('click', function () {
+        var link = location.href;
+        function fallback() {
+            var ta = document.createElement('textarea');
+            ta.value = link;
+            ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast();
+        }
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(link).then(showToast, fallback);
+        } else {
+            fallback();
+        }
+    });
+
+    var tt;
+    function showToast() {
+        toastEl.classList.add('show');
+        clearTimeout(tt);
+        tt = setTimeout(function () { toastEl.classList.remove('show'); }, 2800);
+    }
+
+    /* ---- INIT ---- */
+    function init() {
+        applySofaInitial();
+        /* Convertir a px en 2 frames (tras layout completo) para
+           que el primer clic nunca cause salto ni zoom */
+        requestAnimationFrame(function () {
+            requestAnimationFrame(toAbsPx);
+        });
+        var id  = new URLSearchParams(location.search).get('color');
+        var col = null;
+        for (var i = 0; i < PALETTE.length; i++) {
+            if (PALETTE[i].id === id) { col = PALETTE[i]; break; }
+        }
+        applyColor(col || PALETTE[0]);
+    }
+
+    /* Asegurar init tanto si la imagen ya cargo como si no */
+    var inited = false;
+    function safeInit() {
+        if (inited) return;
+        inited = true;
+        init();
+    }
+    sofaImg.addEventListener('load', function () { requestAnimationFrame(safeInit); });
+    window.addEventListener('load', safeInit);
+
+    window.addEventListener('resize', function () {
+        applySofaInitial();
+        requestAnimationFrame(function () { requestAnimationFrame(toAbsPx); });
+    });
+
+}());
+</script>
+</body>
+</html>
