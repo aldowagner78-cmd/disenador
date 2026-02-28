@@ -146,7 +146,7 @@
   - Conserva la luminosidad del tejido original (luces, sombras, textura)
   - feComposite operator="in" preserva la transparencia del PNG del sillon
 -->
-<svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true">
+<svg style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true">
   <defs>
     <filter id="cSVG" color-interpolation-filters="sRGB"
             x="0%" y="0%" width="100%" height="100%">
@@ -362,7 +362,10 @@
     var activeBtn = null;
     function applyColor(c) {
         cfFlood.setAttribute('flood-color', c.hex);
-        sofaImg.style.filter   = 'url(#cSVG)';
+        /* Forzar repaint: quitar y re-aplicar el filtro en el siguiente frame */
+        sofaImg.style.filter = 'none';
+        void sofaImg.offsetWidth;
+        sofaImg.style.filter = 'url(#cSVG)';
         badge.style.background = c.hex;
         cNameEl.textContent    = c.name;
         cHexEl.textContent     = c.hex;
