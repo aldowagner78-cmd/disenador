@@ -164,11 +164,11 @@
       <!-- 3. Aplicar el color sobre la luminosidad del gris (Photoshop "Color" blend) -->
       <feBlend in="col" in2="gray" mode="color" result="colorized"/>
 
-      <!-- 4. Boost de contraste/profundidad: gamma < 1 aclara medios, > 1 oscurece -->
+      <!-- 4. Contraste suave sin aplanar oscuros ni quemar claros -->
       <feComponentTransfer in="colorized" result="vivid">
-        <feFuncR type="gamma" amplitude="1.08" exponent="0.88" offset="-0.01"/>
-        <feFuncG type="gamma" amplitude="1.08" exponent="0.88" offset="-0.01"/>
-        <feFuncB type="gamma" amplitude="1.08" exponent="0.88" offset="-0.01"/>
+        <feFuncR type="gamma" amplitude="1.04" exponent="0.92" offset="0"/>
+        <feFuncG type="gamma" amplitude="1.04" exponent="0.92" offset="0"/>
+        <feFuncB type="gamma" amplitude="1.04" exponent="0.92" offset="0"/>
       </feComponentTransfer>
 
       <!-- 5. Erosionar el alpha 1px: elimina el halo blanco de los bordes del PNG -->
@@ -236,18 +236,44 @@
 <script>
 (function () {
     var PALETTE = [
-        { id:'arena',      hex:'#C8B97A', name:'Arena'       },
-        { id:'crudo',      hex:'#D4C5B0', name:'Crudo'       },
-        { id:'gris-perla', hex:'#C2BFBA', name:'Gris Perla'  },
-        { id:'gris-medio', hex:'#8A8680', name:'Gris Medio'  },
-        { id:'rosa-palo',  hex:'#CC9E9A', name:'Rosa Palo'   },
-        { id:'menta',      hex:'#90BDB7', name:'Menta'       },
-        { id:'salvia',     hex:'#6E9E76', name:'Vd. Salvia'  },
-        { id:'esmeralda',  hex:'#246858', name:'Esmeralda'   },
-        { id:'terracota',  hex:'#BF5836', name:'Terracota'   },
-        { id:'mostaza',    hex:'#C49030', name:'Mostaza'     },
-        { id:'celeste',    hex:'#82AEBF', name:'Celeste'     },
-        { id:'marino',     hex:'#283E5E', name:'Az. Marino'  }
+        { id:'hueso',      hex:'#EDE8E0', name:'Hueso',       grp:'Neutros'     },
+        { id:'gris-claro', hex:'#CCCAC6', name:'Gris Claro'                     },
+        { id:'gris-perla', hex:'#B0ADA8', name:'Gris Perla'                     },
+        { id:'gris-medio', hex:'#7D7A77', name:'Gris Medio'                     },
+        { id:'gris-osc',   hex:'#4A4744', name:'Gris Oscuro'                    },
+        { id:'casi-negro', hex:'#2E2C2A', name:'Casi Negro'                     },
+        { id:'arena',      hex:'#C8B97A', name:'Arena',       grp:'Beiges'      },
+        { id:'crudo',      hex:'#D4C5B0', name:'Crudo'                          },
+        { id:'camel',      hex:'#C19A6B', name:'Camel'                          },
+        { id:'tabaco',     hex:'#8B6B3D', name:'Tabaco'                         },
+        { id:'cafe',       hex:'#6B4A2A', name:'Cafe'                           },
+        { id:'chocolate',  hex:'#3E2518', name:'Chocolate'                      },
+        { id:'rosa-palo',  hex:'#D4A8A4', name:'Rosa Palo',  grp:'Rojos'       },
+        { id:'rosa-antig', hex:'#C07070', name:'Rosa Ant.'                      },
+        { id:'salmon',     hex:'#E88C70', name:'Salmon'                         },
+        { id:'coral',      hex:'#D45040', name:'Coral'                          },
+        { id:'terracota',  hex:'#BF5836', name:'Terracota'                      },
+        { id:'borgona',    hex:'#7A2832', name:'Borgona'                        },
+        { id:'vainilla',   hex:'#E8D090', name:'Vainilla',   grp:'Amarillos'   },
+        { id:'mostaza',    hex:'#C49030', name:'Mostaza'                        },
+        { id:'ocre',       hex:'#A06820', name:'Ocre'                           },
+        { id:'naranja',    hex:'#D46025', name:'Naranja'                        },
+        { id:'menta',      hex:'#90BDB7', name:'Menta',      grp:'Verdes'      },
+        { id:'eucalipto',  hex:'#7BAA90', name:'Eucalipto'                      },
+        { id:'salvia',     hex:'#6E9E76', name:'Salvia'                         },
+        { id:'oliva',      hex:'#7A8B5A', name:'Oliva'                          },
+        { id:'esmeralda',  hex:'#246858', name:'Esmeralda'                      },
+        { id:'bosque',     hex:'#1E4D38', name:'Bosque'                         },
+        { id:'celeste',    hex:'#82AEBF', name:'Celeste',    grp:'Azules'      },
+        { id:'azul-cielo', hex:'#5090B0', name:'Az. Cielo'                      },
+        { id:'azul-medio', hex:'#2E6898', name:'Az. Medio'                      },
+        { id:'marino',     hex:'#1E4080', name:'Az. Marino'                     },
+        { id:'noche',      hex:'#132850', name:'Az. Noche'                      },
+        { id:'petroleo',   hex:'#1A4855', name:'Petroleo'                       },
+        { id:'lavanda',    hex:'#A898C8', name:'Lavanda',    grp:'Lilas'       },
+        { id:'lila',       hex:'#8870A8', name:'Lila'                           },
+        { id:'violeta',    hex:'#5848A0', name:'Violeta'                        },
+        { id:'berenjena',  hex:'#442060', name:'Berenjena'                      }
     ];
 
     var sofaEl   = document.getElementById('sofa');
@@ -401,6 +427,12 @@
     }
 
     PALETTE.forEach(function (c) {
+        if (c.grp) {
+            var sep = document.createElement('div');
+            sep.style.cssText = 'width:100%;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;padding:6px 2px 2px;';
+            sep.textContent = c.grp;
+            paletteEl.appendChild(sep);
+        }
         var btn = document.createElement('button');
         btn.className = 'sw';
         btn.id        = 'sw-' + c.id;
